@@ -77,12 +77,30 @@ def summarize_pattern(summary_df: pd.DataFrame) -> dict:
         summary_df.dropna(subset=["winner_test"])["winner_test"].value_counts().to_dict()
     )
     vmr_by_stat = summary_df.groupby("stat")["vmr"].mean().to_dict()
-    significant_overdispersion = int((summary_df["dispersion_chi2_pvalue"] < 0.05).sum())
+
+    significant = summary_df[summary_df["dispersion_chi2_pvalue"] < 0.05].sort_values(
+        "dispersion_chi2_pvalue"
+    )
+    significant_series = list(
+        significant[["player", "stat", "vmr", "dispersion_chi2_pvalue"]].itertuples(
+            index=False, name=None
+        )
+    )
+
+    negbin_wins = summary_df[summary_df["winner_train_aic"] == "NegBin"].sort_values(
+        "aic_diff_poisson_minus_negbin", ascending=False
+    )
+    negbin_win_series = list(
+        negbin_wins[["player", "stat", "vmr"]].itertuples(index=False, name=None)
+    )
 
     return {
         "n_series": n_series,
         "winner_train_counts": train_counts,
         "winner_test_counts": test_counts,
         "mean_vmr_by_stat": vmr_by_stat,
-        "n_series_significant_overdispersion_p05": significant_overdispersion,
+        "n_series_significant_overdispersion_p05": len(significant_series),
+        "significant_overdispersion_series": significant_series,
+        "negbin_aic_winner_series": negbin_win_series,
+        "test_n_games_range": (int(summary_df["n_test"].min()), int(summary_df["n_test"].max())),
     }

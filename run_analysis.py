@@ -30,38 +30,63 @@ def _format_win_counts(counts: dict) -> str:
     return "; ".join(f"{model}: {n}" for model, n in sorted(counts.items(), key=lambda kv: -kv[1]))
 
 
+def _format_series_list(series: list[tuple]) -> str:
+    """series: (player, stat, vmr[, pvalue]) tuples -> 'Player (STAT, VMR=x.xx)' list."""
+    parts = []
+    for row in series:
+        player, stat, vmr = row[0], row[1], row[2]
+        parts.append(f"{player} ({stat}, VMR={vmr:.2f})")
+    return "; ".join(parts)
+
+
 def write_linkedin_summary(pattern: dict, season_train: str, season_test: str) -> None:
     winner_train = pattern["winner_train_counts"]
     winner_test = pattern["winner_test_counts"]
     vmr_by_stat = pattern["mean_vmr_by_stat"]
-    higher_stat = max(vmr_by_stat, key=vmr_by_stat.get) if vmr_by_stat else None
-    lower_stat = min(vmr_by_stat, key=vmr_by_stat.get) if vmr_by_stat else None
+    n_series = pattern["n_series"]
+    n_significant = pattern["n_series_significant_overdispersion_p05"]
+    n_negbin_train = winner_train.get("NegBin", 0)
+    n_poisson_train = winner_train.get("Poisson", 0)
+    test_lo, test_hi = pattern["test_n_games_range"]
+
+    significant_list = _format_series_list(pattern["significant_overdispersion_series"])
+    negbin_list = _format_series_list(pattern["negbin_aic_winner_series"])
 
     text = f"""# Resumo para o LinkedIn (rascunho)
 
 Comparei Poisson vs. Binomial Negativa para prever roubos de bola (STL) e
 tocos (BLK) por jogo dos 10 melhores defensores da NBA na temporada
 {season_train} (ranking por Defensive Rating), validando contra os
-primeiros jogos da temporada {season_test}. Ao todo, {pattern['n_series']}
-series (jogador x estatistica) foram ajustadas.
+primeiros jogos da temporada {season_test} ({test_lo} a {test_hi} jogos por
+jogador). Ao todo, {n_series} series (jogador x estatistica) foram ajustadas.
 
-**Resultado no treino (AIC):** {_format_win_counts(winner_train)}
-**Resultado fora da amostra (log-likelihood nos jogos de teste):** {_format_win_counts(winner_test)}
+**Achado principal: na maioria dos casos, Poisson ja basta.** No treino,
+Poisson venceu no AIC em {n_poisson_train} das {n_series} series, e so
+{n_negbin_train} exigiram Binomial Negativa. Overdispersion estatisticamente
+significativa (teste formal, p<0.05) apareceu em apenas {n_significant} das
+{n_series} series -- nao e a regra, e a excecao.
 
-Em {pattern['n_series_significant_overdispersion_p05']} das {pattern['n_series']}
-series, o teste formal de overdispersion rejeitou Poisson a 5% de
-significancia -- ou seja, a variancia observada foi maior do que a media
-prevista pela Poisson com mais frequencia do que o esperado ao acaso.
+Mas quando aparece, e um risco real de subestimar volatilidade: {significant_list}.
 
-Razao variancia/media (VMR) media por estatistica: {_format_vmr_by_stat(vmr_by_stat)}.
-{f"{higher_stat} mostrou, em media, maior overdispersion do que {lower_stat} neste recorte de jogadores." if higher_stat else ""}
+**Fora da amostra (log-likelihood nos jogos de teste):**
+{_format_win_counts(winner_test)} -- mais parelho que no treino, mas os testes
+sao curtos ({test_lo}-{test_hi} jogos por jogador), entao essa comparacao tem
+bem menos poder estatistico do que o AIC no treino e deve ser lida com essa
+ressalva.
 
-**Por que isso importa na pratica:** quem usa esse tipo de previsao para
-apostas esportivas (linhas de over/under), fantasy ou scouting assume
-implicitamente uma distribuicao ao trabalhar so com a media. Se a estatistica
-real e overdispersed e o modelo assume Poisson, a probabilidade de "jogos
-explosivos" (bem acima da media) fica subestimada -- o que tem custo direto
-em decisao de risco.
+Series onde a Binomial Negativa venceu no AIC: {negbin_list}.
+
+Razao variancia/media (VMR) medio por estatistica: {_format_vmr_by_stat(vmr_by_stat)}
+-- overdispersion leve na media, concentrada em poucos jogadores/estatisticas,
+nao um padrao geral.
+
+**Por que isso importa na pratica:** a licao nao e "troque Poisson por
+Binomial Negativa sempre". E "nao assuma Poisson sem checar" -- para a maioria
+dos jogadores/estatisticas aqui, Poisson descreve bem o padrao de jogo a
+jogo, mas para um subconjunto especifico (normalmente estatisticas de volume
+baixo, como tocos de nao-pivos) a variancia real e maior do que a media
+prevista, e ai um modelo Poisson para uma linha de over/under, fantasy ou
+scouting vai subestimar a chance de jogos fora da curva.
 
 ---
 *Rascunho gerado automaticamente a partir de results/summary_table.csv --
