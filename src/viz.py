@@ -95,8 +95,9 @@ def plot_dispersion_overview(summary_df, out_path: pathlib.Path) -> None:
 
     fig, ax = plt.subplots(figsize=(7.2, 5.4), dpi=150)
     _apply_base_style(ax)
+    ax.set_ylim(-0.6, len(players) - 1 + 0.7)
     ax.axvline(1.0, color=MUTED_INK, linewidth=1, linestyle="--", zorder=1)
-    ax.text(1.0, len(players) - 0.3, " VMR = 1 (Poisson)", color=MUTED_INK, fontsize=8, va="bottom")
+    ax.text(1.0, len(players) - 1 + 0.4, " VMR = 1 (Poisson)", color=MUTED_INK, fontsize=8, va="bottom")
 
     for stat, color, offset in (("STL", BLUE, 0.12), ("BLK", ORANGE, -0.12)):
         sub = df[df["stat"] == stat]
@@ -116,8 +117,15 @@ def plot_dispersion_overview(summary_df, out_path: pathlib.Path) -> None:
 
 def plot_top_interesting_cases(records: list[dict], out_dir: pathlib.Path = FIG_DIR, n: int = 4,
                                 season_train: str = "2024-25") -> list[pathlib.Path]:
-    """Plots the `n` series with the largest |AIC(Poisson) - AIC(NegBin)| gap."""
-    ranked = sorted(records, key=lambda r: abs(r["aic_diff_poisson_minus_negbin"]), reverse=True)
+    """
+    Plots the `n` series where Negative Binomial most clearly beats Poisson
+    on AIC (largest signed aic_diff_poisson_minus_negbin). Ranking by the
+    absolute gap instead would surface boundary artifacts -- series where
+    alpha->0 and NegBin's AIC is trivially ~2 points *worse* than Poisson's
+    (the unearned extra-parameter penalty), which aren't the overdispersion
+    stories this plot exists to show.
+    """
+    ranked = sorted(records, key=lambda r: r["aic_diff_poisson_minus_negbin"], reverse=True)
     paths = []
     for rec in ranked[:n]:
         fname = f"fit_{rec['player'].replace(' ', '_')}_{rec['stat']}.png"

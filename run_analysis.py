@@ -26,6 +26,10 @@ def _format_vmr_by_stat(vmr_by_stat: dict) -> str:
     return "; ".join(f"{stat}: {vmr:.2f}" for stat, vmr in sorted(vmr_by_stat.items()))
 
 
+def _format_win_counts(counts: dict) -> str:
+    return "; ".join(f"{model}: {n}" for model, n in sorted(counts.items(), key=lambda kv: -kv[1]))
+
+
 def write_linkedin_summary(pattern: dict, season_train: str, season_test: str) -> None:
     winner_train = pattern["winner_train_counts"]
     winner_test = pattern["winner_test_counts"]
@@ -37,12 +41,12 @@ def write_linkedin_summary(pattern: dict, season_train: str, season_test: str) -
 
 Comparei Poisson vs. Binomial Negativa para prever roubos de bola (STL) e
 tocos (BLK) por jogo dos 10 melhores defensores da NBA na temporada
-{season_train} (ranking por Defensive Win Shares), validando contra os
+{season_train} (ranking por Defensive Rating), validando contra os
 primeiros jogos da temporada {season_test}. Ao todo, {pattern['n_series']}
 series (jogador x estatistica) foram ajustadas.
 
-**Resultado no treino (AIC):** {winner_train}
-**Resultado fora da amostra (log-likelihood nos jogos de teste):** {winner_test}
+**Resultado no treino (AIC):** {_format_win_counts(winner_train)}
+**Resultado fora da amostra (log-likelihood nos jogos de teste):** {_format_win_counts(winner_test)}
 
 Em {pattern['n_series_significant_overdispersion_p05']} das {pattern['n_series']}
 series, o teste formal de overdispersion rejeitou Poisson a 5% de
