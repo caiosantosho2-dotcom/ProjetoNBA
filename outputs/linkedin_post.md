@@ -33,6 +33,4 @@ projeção ingênua de uma calibrada.
 Código, dados e gráficos completos no GitHub:
 https://github.com/caiosantosho2-dotcom/ProjetoNBA
 
----
-*Rascunho — ajuste o tom/comprimento antes de publicar. Os números batem
-com results/summary_table.csv (regenerado por `python run_analysis.py`).*
+
