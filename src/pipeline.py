@@ -1,7 +1,7 @@
 """
-Runs the full comparison across the 20 series: 10 players (selected by DWS)
-x 2 stats (STL, BLK). One reusable loop calling fit_and_compare() per series,
-so no logic is duplicated across players/stats.
+Runs the full comparison across the 20 series: 10 players (selected by
+Defensive Rating) x 2 stats (STL, BLK). One reusable loop calling
+fit_and_compare() per series, so no logic is duplicated across players/stats.
 """
 from __future__ import annotations
 

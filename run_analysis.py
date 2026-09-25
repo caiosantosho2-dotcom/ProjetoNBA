@@ -71,13 +71,12 @@ def main() -> None:
     season_train = "2024-25"
     season_test = "2025-26"
 
-    logging.info("Rodando pipeline: top10 por DWS -> game logs -> Poisson vs NegBin (20 series)")
+    logging.info("Rodando pipeline: top10 por Defensive Rating -> game logs -> Poisson vs NegBin (20 series)")
     summary_df, records = run_pipeline(season_train=season_train, season_test=season_test)
 
     if summary_df.empty:
         logging.error(
-            "Pipeline nao retornou nenhuma serie. Verifique a conectividade "
-            "com nba_api / basketball-reference."
+            "Pipeline nao retornou nenhuma serie. Verifique a conectividade com nba_api."
         )
         return
 

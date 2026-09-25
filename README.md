@@ -25,10 +25,10 @@ sistematicamente mal calibrado para o risco de "jogos fora da curva".
 
 ## Escopo
 
-- **Top 10 defensores da temporada 2024-25**, selecionados por *Defensive Win
-  Shares* (DWS) — métrica agregada de basketball-reference que combina minutos,
-  eficiência defensiva do time e uso, em vez de olhar só o volume bruto de
-  steals+blocks.
+- **Top 10 defensores da temporada 2024-25**, selecionados por *Defensive
+  Rating* (pontos permitidos por 100 posses com o jogador em quadra, menor é
+  melhor) — métrica de contexto de time exposta pelo próprio `nba_api`, em vez
+  de olhar só o volume bruto de steals+blocks.
 - Para cada um dos 10 jogadores: **20 séries no total** (steals e blocks
   separadamente).
 - **Treino:** todos os jogos da temporada 2024-25 de cada jogador.
@@ -37,9 +37,9 @@ sistematicamente mal calibrado para o risco de "jogos fora da curva".
 
 ## Metodologia
 
-1. **Seleção do top 10** — tabela "Advanced" de basketball-reference
-   (`DWS`), filtrando jogadores com poucos jogos (ruído de amostra pequena) e
-   consolidando jogadores trocados de time na linha `TOT`.
+1. **Seleção do top 10** — `leaguedashplayerstats` (MeasureType=Advanced) do
+   `nba_api`, ranqueando por `DEF_RATING` e filtrando jogadores com poucos
+   jogos (ruído de amostra pequena).
 2. **Game logs jogo-a-jogo** via [`nba_api`](https://github.com/swar/nba_api)
    (`PlayerGameLog`), para 2024-25 (treino) e para os primeiros N jogos de
    2025-26 (teste). N é configurável (`run_pipeline(test_n_games=10)`).
@@ -62,11 +62,14 @@ sistematicamente mal calibrado para o risco de "jogos fora da curva".
 
 ## Decisões técnicas relevantes
 
-- **DWS via basketball-reference, game logs via nba_api**: DWS não é exposto
-  pelo nba_api, então usamos basketball-reference *só* para o ranking dos top
-  10 (**uma única requisição HTTP**, não game-by-game) e nba_api para todo o
-  resto — minimiza a superfície de scraping mantendo a métrica de seleção mais
-  robusta (DWS captura contexto defensivo, não só volume de steals+blocks).
+- **Defensive Rating via nba_api, não Defensive Win Shares via
+  basketball-reference**: a versão original desta seleção usava DWS
+  (basketball-reference), mas o site passou a bloquear requisições
+  automatizadas atrás de um desafio JS do Cloudflare, que não dá pra resolver
+  com headers HTTP simples. Trocamos para Defensive Rating, exposto direto
+  pelo `nba_api` — elimina scraping por completo, ao custo de ser uma métrica
+  de contexto de time (rating defensivo do time com o jogador em quadra), não
+  puramente individual como DWS.
 - **Jogadores sem dados em 2025-26** (aposentadoria, lesão prolongada, saída da
   liga) são logados e excluídos apenas das séries de teste correspondentes —
   não derrubam o pipeline nem são silenciosamente ignorados.
@@ -87,8 +90,8 @@ sistematicamente mal calibrado para o risco de "jogos fora da curva".
 
 ```
 ├── src/
-│   ├── data_sources.py    # scrape DWS (b-ref) + pulls nba_api (game logs)
-│   ├── select_top10.py    # rankeia por DWS, resolve player_id via nba_api
+│   ├── data_sources.py    # pulls nba_api: defensive rating + game logs
+│   ├── select_top10.py    # rankeia por Defensive Rating (nba_api)
 │   ├── models.py          # fit Poisson/NegBin, AIC, teste de overdispersion
 │   ├── pipeline.py        # loop reutilizavel sobre as 20 series
 │   └── viz.py             # graficos dos casos mais interessantes
